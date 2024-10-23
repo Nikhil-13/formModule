@@ -1,118 +1,117 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+import {View, Text, StyleSheet, Button} from 'react-native';
+import React, {useRef} from 'react';
+import {FORMS, FieldType} from './src/HookForm';
+import {Controller, useForm} from 'react-hook-form';
+import {zodResolver} from '@hookform/resolvers/zod';
+import Input from './src/components/Input';
+import PhoneInput, {isValidNumber} from 'react-native-phone-number-input';
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+const App = () => {
+  const {
+    control,
+    getValues,
+    setValue,
+    setError,
+    formState: {errors},
+  } = useForm({
+    defaultValues: FORMS.LOGIN.initialValues,
+    resolver: zodResolver(FORMS.LOGIN.schema),
+    mode: 'all',
+  });
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+  const inputRefs = FORMS.LOGIN?.fields?.map(_ => null);
+  const phoneInputRefs = [];
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
-
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
-
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+  const handlePhoneInputChange = fieldName => {
+    const state = phoneInputRefs?.find(
+      input => input['fieldName'] === fieldName,
+    )?.state;
+    const {number, code, countryCode} = state ?? {};
+    console.log('number, code, countryCode', number, code, countryCode);
+    // isValidNumber(number, countryCode)
+    //   ? setValue(fieldName, `+${code}${number}`, {
+    //       shouldValidate: true,
+    //     })
+    //   : setError(fieldName, {message: 'Enter a valid phone number'});
   };
 
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
+    <View style={styles.root}>
+      {FORMS.LOGIN.fields?.map((field, index) => {
+        return (
+          <Controller
+            control={control}
+            render={({field: {onChange, onBlur, value}}) => {
+              return field?.type === FieldType.REGULAR ? (
+                <Input
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                  error={errors[field?.name] && errors[field?.name]['message']}
+                  placeholder={field?.placeholder}
+                  ref={ref => (inputRefs[index] = ref)}
+                  onSubmitEditing={() => inputRefs[index + 1]?.focus()}
+                  secureTextEntry={field?.isSecureEntry}
+                />
+              ) : field?.type === FieldType.PHONE ? (
+                <>
+                  <PhoneInput
+                    ref={ref =>
+                      phoneInputRefs?.push({...ref, fieldName: field?.name})
+                    }
+                    containerStyle={styles.phoneInputContainer}
+                    textInputProps={{ref: ref => (inputRefs[index] = ref)}}
+                    onChangeCountry={() => handlePhoneInputChange(field?.name)}
+                    onChangeText={() => handlePhoneInputChange(field?.name)}
+                  />
+                  <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>
+                      {errors?.[field?.name] && errors[field?.name]['message']}
+                    </Text>
+                  </View>
+                </>
+              ) : field?.type === FieldType.DATE ? (
+                <></>
+              ) : null;
+            }}
+            name={field?.name}
+          />
+        );
+      })}
+      <Button
+        title={'submit'}
+        onPress={() => {
+          console.log(phoneInputRefs[1]['fieldName']);
+          // console.log(getValues());
+          // console.log(errors);
+        }}
       />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    </View>
   );
-}
-
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-});
+};
 
 export default App;
+const styles = StyleSheet.create({
+  root: {
+    paddingTop: 100,
+    paddingHorizontal: 20,
+    // backgroundColor: 'hotpink',
+    flex: 1,
+  },
+  phoneInputContainer: {
+    borderWidth: 1,
+    width: '100%',
+  },
+  errorContainer: {
+    marginTop: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  errorText: {
+    fontSize: 14,
+    marginLeft: 7,
+    maxWidth: '95%',
+    lineHeight: 18,
+    color: 'red',
+  },
+});
