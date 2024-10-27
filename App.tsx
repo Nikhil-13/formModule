@@ -1,10 +1,10 @@
 import {View, Text, StyleSheet, Button} from 'react-native';
-import React, {useRef} from 'react';
+import React from 'react';
 import {FORMS, FieldType} from './src/HookForm';
 import {Controller, useForm} from 'react-hook-form';
 import {zodResolver} from '@hookform/resolvers/zod';
 import Input from './src/components/Input';
-import PhoneInput, {isValidNumber} from 'react-native-phone-number-input';
+import PhoneInput from 'react-native-phone-number-input';
 
 const App = () => {
   const {
@@ -16,23 +16,23 @@ const App = () => {
   } = useForm({
     defaultValues: FORMS.LOGIN.initialValues,
     resolver: zodResolver(FORMS.LOGIN.schema),
-    mode: 'all',
+    mode: 'onBlur',
   });
 
   const inputRefs = FORMS.LOGIN?.fields?.map(_ => null);
   const phoneInputRefs = [];
 
-  const handlePhoneInputChange = fieldName => {
-    const state = phoneInputRefs?.find(
+  const handlePhoneInputChange = (fieldName, value) => {
+    const relevantRef = phoneInputRefs?.find(
       input => input['fieldName'] === fieldName,
-    )?.state;
-    const {number, code, countryCode} = state ?? {};
-    console.log('number, code, countryCode', number, code, countryCode);
-    // isValidNumber(number, countryCode)
-    //   ? setValue(fieldName, `+${code}${number}`, {
-    //       shouldValidate: true,
-    //     })
-    //   : setError(fieldName, {message: 'Enter a valid phone number'});
+    );
+    const {number, code} = relevantRef?.state;
+    const isvalid = relevantRef.isValidNumber(value);
+    isvalid
+      ? setValue(fieldName, `+${code}${number}`, {
+          shouldValidate: true,
+        })
+      : setError(fieldName, {message: 'Enter a valid phone number'});
   };
 
   return (
@@ -62,7 +62,10 @@ const App = () => {
                     containerStyle={styles.phoneInputContainer}
                     textInputProps={{ref: ref => (inputRefs[index] = ref)}}
                     onChangeCountry={() => handlePhoneInputChange(field?.name)}
-                    onChangeText={() => handlePhoneInputChange(field?.name)}
+                    e
+                    onChangeText={value =>
+                      handlePhoneInputChange(field?.name, value)
+                    }
                   />
                   <View style={styles.errorContainer}>
                     <Text style={styles.errorText}>
@@ -81,9 +84,7 @@ const App = () => {
       <Button
         title={'submit'}
         onPress={() => {
-          console.log(phoneInputRefs[1]['fieldName']);
-          // console.log(getValues());
-          // console.log(errors);
+          console.log(getValues());
         }}
       />
     </View>
@@ -95,7 +96,7 @@ const styles = StyleSheet.create({
   root: {
     paddingTop: 100,
     paddingHorizontal: 20,
-    // backgroundColor: 'hotpink',
+    backgroundColor: '#fafa00',
     flex: 1,
   },
   phoneInputContainer: {
